@@ -13,10 +13,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(() => {
+    return localStorage.getItem('billora_demo_user');
+  });
 
   useEffect(() => {
-    // Check initial auth state
+    // Check initial Supabase auth state if configured
     if (isSupabaseConfigured) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user?.email) {
@@ -29,7 +31,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         if (session?.user?.email) {
           setCurrentUserEmail(session.user.email);
           onLoginSuccess?.(session.user.email);
-        } else {
+        } else if (!localStorage.getItem('billora_demo_user')) {
           setCurrentUserEmail(null);
         }
       });
@@ -50,7 +52,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     if (!isSupabaseConfigured) {
       setErrorMessage(
-        'Supabase is not configured yet. Add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to frontend/.env.'
+        'Supabase is not configured yet. You can create frontend/.env or click "Continue in Demo Mode" below to proceed immediately.'
       );
       return;
     }
@@ -67,7 +69,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         if (error) throw error;
 
         if (data.user && !data.session) {
-          setSuccessMessage('Registration successful! Please check your email for the verification link.');
+          setSuccessMessage('Registration successful! Please check your email for verification.');
         } else {
           setSuccessMessage('Account created and signed in successfully!');
         }
@@ -87,10 +89,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleDemoLogin = () => {
+    const demoEmail = email.trim() || 'deepikasbsd2007@gmail.com';
+    localStorage.setItem('billora_demo_user', demoEmail);
+    setCurrentUserEmail(demoEmail);
+    onLoginSuccess?.(demoEmail);
+  };
+
   const handleSignOut = async () => {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
+    localStorage.removeItem('billora_demo_user');
     setCurrentUserEmail(null);
     setSuccessMessage('Successfully signed out.');
   };
@@ -109,11 +119,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <div className="my-6 space-y-3">
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-              <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Active Account</span>
+              <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Logged In As</span>
               <p className="mt-1 text-sm font-medium text-slate-100 truncate">{currentUserEmail}</p>
             </div>
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs text-emerald-300">
-              ✓ Authenticated with Supabase. Ready for subscription management.
+              ✓ Authentication successful! Billora session active.
             </div>
           </div>
 
@@ -183,10 +193,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           {/* Setup notice if Supabase not configured */}
           {!isSupabaseConfigured && (
             <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
-              <span className="font-semibold block mb-0.5">⚠️ Supabase Configuration Required</span>
-              Add your <code className="bg-amber-950/60 px-1 py-0.5 rounded">VITE_SUPABASE_URL</code> and{' '}
-              <code className="bg-amber-950/60 px-1 py-0.5 rounded">VITE_SUPABASE_ANON_KEY</code> to{' '}
-              <code className="bg-amber-950/60 px-1 py-0.5 rounded">frontend/.env</code> to enable live authentication.
+              <span className="font-semibold block mb-0.5">⚠️ Supabase Setup Pending</span>
+              Create a <code className="bg-amber-950/60 px-1 py-0.5 rounded">frontend/.env</code> file with your Supabase keys, or click <strong>Continue in Demo Mode</strong> below to test immediately.
             </div>
           )}
 
@@ -251,9 +259,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </button>
           </form>
 
+          {/* Quick Demo Mode Bypass */}
+          <div className="mt-4 pt-4 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition"
+            >
+              ⚡ Continue in Demo Mode (Instant Access)
+            </button>
+          </div>
+
           {/* Footer note */}
-          <div className="mt-6 border-t border-slate-800 pt-4 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mt-4 text-center">
+            <p className="text-[11px] text-slate-400">
               Secured with Supabase Authentication & PostgreSQL RLS
             </p>
           </div>
